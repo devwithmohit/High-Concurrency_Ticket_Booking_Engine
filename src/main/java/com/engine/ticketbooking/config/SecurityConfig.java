@@ -37,6 +37,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public authentication and actuator probe endpoints
                 .requestMatchers("/api/v1/auth/**").permitAll()
+                .requestMatchers("/api/v1/webhooks/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 // Public Seat Map and Event Read APIs
                 .requestMatchers(HttpMethod.GET, "/api/v1/events/**").permitAll()

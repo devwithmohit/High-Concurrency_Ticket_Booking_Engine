@@ -83,4 +83,23 @@ public class RedisLockService {
             }
         }
     }
+
+    /**
+     * Forcefully evicts Redis distributed locks for specified seat IDs
+     * (used during sweeper cleanup and booking confirmation).
+     */
+    public void deleteSeatLocks(Collection<UUID> seatIds) {
+        if (seatIds == null || seatIds.isEmpty()) {
+            return;
+        }
+        List<String> keys = seatIds.stream()
+                .map(id -> SEAT_LOCK_PREFIX + id)
+                .toList();
+        try {
+            stringRedisTemplate.delete(keys);
+            log.debug("Deleted Redis locks for seats: {}", seatIds);
+        } catch (Exception e) {
+            log.warn("Failed to delete Redis locks for seats: {}. Error: {}", seatIds, e.getMessage());
+        }
+    }
 }
