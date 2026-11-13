@@ -25,7 +25,7 @@ public interface SeatRepository extends JpaRepository<Seat, UUID> {
      * Callers must pass seatIds pre-sorted in ascending UUID order to prevent deadlocks.
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT s FROM Seat s WHERE s.id IN :seatIds")
+    @Query("SELECT s FROM Seat s WHERE s.id IN :seatIds ORDER BY s.id ASC")
     List<Seat> findAllByIdInWithPessimisticLock(@Param("seatIds") Collection<UUID> seatIds);
 
     /**

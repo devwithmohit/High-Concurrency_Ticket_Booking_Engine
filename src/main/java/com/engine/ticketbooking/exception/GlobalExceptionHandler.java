@@ -44,6 +44,30 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
     }
 
+    @ExceptionHandler(org.springframework.web.bind.MissingRequestHeaderException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingHeader(org.springframework.web.bind.MissingRequestHeaderException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", Instant.now());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Missing Header");
+        body.put("message", "Required header '" + ex.getHeaderName() + "' is missing");
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(SeatConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleSeatConflict(SeatConflictException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", Instant.now());
+        body.put("status", HttpStatus.CONFLICT.value());
+        body.put("error", "Conflict");
+        body.put("message", ex.getMessage());
+        if (!ex.getUnavailableSeatIds().isEmpty()) {
+            body.put("unavailableSeatIds", ex.getUnavailableSeatIds());
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
         Map<String, Object> body = new HashMap<>();
