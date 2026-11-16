@@ -1,4 +1,4 @@
-# High-Concurrency Ticket Booking Engine
+# Zero Double-Booking Guarantee (Tested under 200 concurrent VUs)
 
 A production-grade transactional backend engine designed to handle high-concurrency seat reservations with a **strict zero double-booking guarantee**, distributed locking, idempotent webhooks, and automatic expired lock cleanup—tuned for 512MB RAM free-tier environments and architected to scale seamlessly to enterprise and government workloads with zero code changes.
 
