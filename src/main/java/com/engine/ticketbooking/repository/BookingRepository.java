@@ -20,7 +20,8 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     /**
      * Enforce idempotency on all booking creation and confirmation operations.
      */
-    Optional<Booking> findByIdempotencyKey(String idempotencyKey);
+    @Query("SELECT b FROM Booking b LEFT JOIN FETCH b.bookingSeats bs LEFT JOIN FETCH bs.seat WHERE b.idempotencyKey = :idempotencyKey")
+    Optional<Booking> findByIdempotencyKey(@Param("idempotencyKey") String idempotencyKey);
 
     List<Booking> findByUserId(UUID userId);
 
@@ -29,7 +30,8 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     /**
      * Used by active sweeper to find pending bookings that have expired.
      */
-    List<Booking> findByStatusAndExpiresAtBefore(BookingStatus status, Instant now);
+    @Query("SELECT DISTINCT b FROM Booking b LEFT JOIN FETCH b.bookingSeats bs LEFT JOIN FETCH bs.seat WHERE b.status = :status AND b.expiresAt < :now")
+    List<Booking> findByStatusAndExpiresAtBefore(@Param("status") BookingStatus status, @Param("now") Instant now);
 
     /**
      * Pessimistic lock on booking for payment webhook confirmation race condition handling.

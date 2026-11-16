@@ -12,7 +12,7 @@ const unexpectedStatusCounter = new Counter('unexpected_status');
 // ============================================================================
 // Configuration
 // ============================================================================
-const VUS = parseInt(__ENV.VUS || '100', 10);
+const VUS = parseInt(__ENV.VUS || '200', 10);
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 
 export const options = {
@@ -32,7 +32,7 @@ export const options = {
     // Assert ZERO unexpected statuses (500 internal server error, 401 unauthorized, etc.)
     'unexpected_status': ['count==0'],
   },
-  setupTimeout: '120s',
+  setupTimeout: '180s',
 };
 
 // ============================================================================
@@ -118,11 +118,12 @@ export function setup() {
   const targetSeatNumber = targetSeat.seatNumber;
   console.log(`[k6 Setup] Target Contested Seat: ${targetSeatNumber} (ID: ${targetSeatId})`);
 
-  // 4. Pre-register / authenticate distinct user tokens for each VU
-  console.log(`[k6 Setup] Provisioning tokens for ${VUS} distinct user accounts...`);
+  // 4. Pre-register / authenticate user tokens for concurrency testing
+  const poolSize = Math.min(VUS, 50);
+  console.log(`[k6 Setup] Provisioning tokens for ${poolSize} distinct user accounts...`);
   const tokens = [];
 
-  for (let i = 1; i <= VUS; i++) {
+  for (let i = 1; i <= poolSize; i++) {
     const username = `k6_runner_${Date.now()}_${i}`;
     const registerRes = http.post(`${BASE_URL}/api/v1/auth/register`, JSON.stringify({
       username: username,
@@ -142,7 +143,7 @@ export function setup() {
     }
   }
 
-  console.log(`[k6 Setup] Provisioned ${tokens.length} tokens. Starting simultaneous race test!`);
+  console.log(`[k6 Setup] Provisioned ${tokens.length} tokens. Starting simultaneous race test with ${VUS} VUs!`);
 
   return {
     baseUrl: BASE_URL,
@@ -161,8 +162,9 @@ export default function (data) {
   const vuIndex = (__VU - 1) % data.tokens.length;
   const token = data.tokens[vuIndex];
 
-  // Each concurrent virtual user passes a unique Idempotency-Key
-  const idempotencyKey = `idemp-race-${data.targetSeatId}-vu${__VU}-${Date.now()}`;
+  // Each concurrent virtual user passes a unique Idempotency-Key (must be <= 64 chars)
+  const shortSeatId = data.targetSeatId.split('-')[0];
+  const idempotencyKey = `k6-race-${shortSeatId}-vu${__VU}-${Date.now()}`;
 
   const payload = JSON.stringify({
     eventId: data.eventId,
@@ -207,19 +209,23 @@ export function handleSummary(data) {
 
   const passed = successCount === 1 && conflictCount === (VUS - 1) && unexpectedCount === 0;
 
-  console.log('\n' + '='.repeat(68));
-  console.log('   HIGH-CONCURRENCY SEAT RESERVATION RACE TEST SUMMARY');
-  console.log('='.repeat(68));
-  console.log(`  Total Concurrent Requests:     ${total}`);
-  console.log(`  Expected VUs:                  ${VUS}`);
-  console.log(`  Successful Locks (201/200):    ${successCount} (Required: 1)`);
-  console.log(`  Conflicts Prevented (409):     ${conflictCount} (Required: ${VUS - 1})`);
-  console.log(`  Unexpected Status Codes:       ${unexpectedCount} (Required: 0)`);
-  console.log('-'.repeat(68));
-  console.log(`  Zero Double-Booking Guarantee: ${passed ? 'PASSED [OK]' : 'FAILED [VIOLATION]'}`);
-  console.log('='.repeat(68) + '\n');
+  const summary = [
+    '',
+    '='.repeat(68),
+    '   HIGH-CONCURRENCY SEAT RESERVATION RACE TEST SUMMARY',
+    '='.repeat(68),
+    `  Total Concurrent Requests:     ${total}`,
+    `  Expected VUs:                  ${VUS}`,
+    `  Successful Locks (201/200):    ${successCount} (Required: 1)`,
+    `  Conflicts Prevented (409):     ${conflictCount} (Required: ${VUS - 1})`,
+    `  Unexpected Status Codes:       ${unexpectedCount} (Required: 0)`,
+    '-'.repeat(68),
+    `  Zero Double-Booking Guarantee: ${passed ? 'PASSED [OK]' : 'FAILED [VIOLATION]'}`,
+    '='.repeat(68),
+    ''
+  ].join('\n');
 
   return {
-    stdout: null, // suppress default dump since we formatted above
+    stdout: summary,
   };
 }

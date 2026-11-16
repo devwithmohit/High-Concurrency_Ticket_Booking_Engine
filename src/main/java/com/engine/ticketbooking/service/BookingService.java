@@ -15,7 +15,10 @@ import com.engine.ticketbooking.repository.SeatRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+import jakarta.annotation.PostConstruct;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -39,6 +42,13 @@ public class BookingService {
     private final EventRepository eventRepository;
     private final RedisLockService redisLockService;
     private final SeatMapCacheService seatMapCacheService;
+    private final PlatformTransactionManager transactionManager;
+    private TransactionTemplate transactionTemplate;
+
+    @PostConstruct
+    public void init() {
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+    }
 
     /**
      * Two-Phase Seat Reservation:
@@ -83,7 +93,9 @@ public class BookingService {
 
         try {
             // Step 4 & 5: Layer 2 (Source of Truth - PostgreSQL inside Transaction)
-            Booking booking = executeDatabaseReservation(userId, idempotencyKey, request.getEventId(), sortedSeatIds);
+            Booking booking = transactionTemplate.execute(status ->
+                executeDatabaseReservation(userId, idempotencyKey, request.getEventId(), sortedSeatIds)
+            );
 
             // Invalidate Redis Seat Map cache so other clients immediately see updated statuses
             seatMapCacheService.evictSeatMap(request.getEventId());

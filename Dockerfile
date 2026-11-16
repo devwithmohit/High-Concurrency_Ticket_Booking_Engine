@@ -4,9 +4,6 @@ FROM maven:3.9.9-eclipse-temurin-21-alpine AS builder
 WORKDIR /build
 
 COPY pom.xml .
-# Download dependencies in a separate layer for faster cached builds
-RUN mvn dependency:go-offline -B
-
 COPY src ./src
 RUN mvn clean package -DskipTests -B
 
@@ -21,7 +18,7 @@ USER appuser:appgroup
 COPY --from=builder /build/target/*.jar app.jar
 
 # JVM tuning flags for container memory optimization under 512MB RAM constraints
-ENV JAVA_TOOL_OPTIONS="-Xmx320m -Xms200m -XX:MaxMetaspaceSize=96m -XX:+UseG1GC"
+ENV JAVA_TOOL_OPTIONS="-Xmx260m -Xms160m -XX:MaxMetaspaceSize=144m -XX:+UseG1GC"
 
 EXPOSE 8080
 

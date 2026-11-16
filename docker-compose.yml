@@ -48,7 +48,7 @@ services:
       - "8080:8080"
     environment:
       # JVM tuning flags for 512MB RAM free-tier container memory optimization
-      JAVA_TOOL_OPTIONS: "-Xmx320m -Xms200m -XX:MaxMetaspaceSize=96m -XX:+UseG1GC"
+      JAVA_TOOL_OPTIONS: "-Xmx260m -Xms160m -XX:MaxMetaspaceSize=144m -XX:+UseG1GC"
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ticket_engine
@@ -78,7 +78,7 @@ services:
         condition: service_healthy
     environment:
       - BASE_URL=http://app:8080
-      - VUS=100
+      - VUS=200
     volumes:
       - ./load-test.js:/load-test.js
     command: ["run", "/load-test.js"]
